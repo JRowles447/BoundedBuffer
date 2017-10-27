@@ -18,7 +18,21 @@ int consumed = 0;
 int producer_sleep = 0; 
 int consumer_sleep = 0;
 
-pthread_mutex_t produced_lock = PTHREAD_MUTEX_INITIALIZER; //lock for access to buffer to provide mutual exclusion
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; //lock for access to buffer to provide mutual exclusion
+sem_t mutex;
+sem_init(&mutex, 0, 1);
+sem_t empty;
+sem_t full;
+sem_init(&empty, 0, 1);   // Make some sort of macro something
+sem_init(&full, 0, 0);
+
+// pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
+// pthread_cond_t full = PTHREAD_COND_INITIALIZER;
+
+
+
+
+
 // pthread_mutex_t producer_lock = PTHREAD_MUTEX_INITIALIZER; //lock for access to buffer to provide mutual exclusion
 
 
@@ -76,6 +90,26 @@ void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
 
 void* producer(void* threadID){
 	//TODO: producer thread, see instruction for implementation
+	long t_id = (long) threadID;
+	while(produced < total_items) {
+		
+		pthread_mutex_lock(&mutex);
+
+		int random = rand();
+		printf("Producer produced = %d \n", random);
+
+		BB->append(random);
+		printf("appending completed\n");
+		produced+=1;
+		pthread_cond_signal(&full);
+
+		pthread_mutex_unlock(&mutex);
+
+
+	}
+
+
+	/* 
 	printf("sleep interval is: %d\n",producer_sleep);
 	long t_id = (long) threadID;
 	printf("producer: %ld produced\n", t_id);
@@ -102,6 +136,7 @@ void* producer(void* threadID){
 		printf("Produced item %d\n", random);
 		// pthread_mutex_unlock(&producer_lock);
 	}
+	*/
 	// test code end
 	printf("producer done \n");
 
@@ -114,7 +149,21 @@ void* consumer(void* threadID){
 	printf("consumer: %ld produced\n", t_id);
 
 	// code here ***********************
+	int sleep_time = 0;
+	while(consumed != total_items) {
+		printf("CONSUMERS HAVE CONSUMED %d/%d ITEMS, %d ITEMS PRODUCED, YUM YUM YUM\n", consumed, total_items-1, produced);
+				
+		pthread_mutex_lock(&mutex);
+		while(BB->isEmpty()) {
+			pthread_cond_wait(&full, &mutex);
+		}
+		int removed = BB->remove();
+		consumed+=1;
+		printf("Consuremer removed %d", removed);
+		pthread_mutex_unlock(&mutex);
 
+	}
+	/*
 	int sleep_time = 0;
 	// while there are still items being produced an in the queue
 	while(produced < total_items || consumed != total_items){
@@ -133,6 +182,7 @@ void* consumer(void* threadID){
 
 		printf("Consumed item %d\n", removed);
 	}
+	*/
 
 	// end code here
 	printf("consumer done\n");
