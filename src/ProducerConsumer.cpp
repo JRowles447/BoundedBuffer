@@ -159,7 +159,7 @@ void* consumer(void* threadID){
 		}
 		int removed = BB->remove();
 		consumed+=1;
-		printf("Consuremer removed %d", removed);
+		printf("Consumer removed %d", removed);
 		pthread_mutex_unlock(&mutex);
 
 	}
