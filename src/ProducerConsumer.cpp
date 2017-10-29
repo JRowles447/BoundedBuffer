@@ -87,23 +87,29 @@ void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
 void* producer(void* threadID){
 	//TODO: producer thread, see instruction for implementation
 	long t_id = (long) threadID;
+	int sleep_time = 0;
 	while(produced < total_items) {
+		sleep_time = curr_time;
+		usleep(producer_sleep);
+		curr_time = sleep_time + producer_sleep;
 		sem_wait(&empty);
 		sem_wait(&mutex);
 
 		int random = rand();
-		printf("Producer produced = %d \n", random);
+		// printf("Producer produced = %d \n", random);
 
 		BB->append(random);
-		printf("appending completed\n");
+		// printf("appending completed\n");
 		produced+=1;
+		printf("Producer #%ld, time = %d, producing data item #%d, item value=%d\n", t_id, curr_time, produced, random);
+
 		sem_post(&mutex);
 		sem_post(&full);
 
 	}
 
 	// test code end
-	printf("producer done ***********************************\n");
+	// printf("producer done ***********************************\n");
 
 	pthread_exit(NULL);
 }
@@ -111,22 +117,26 @@ void* producer(void* threadID){
 void* consumer(void* threadID){
 	//TODO: consumer thread, see instruction for implementation
 	long t_id = (long) threadID;
-	printf("consumer: %ld produced\n", t_id);
+	// printf("consumer: %ld produced\n", t_id);
 
 	// code here ***********************
 	int sleep_time = 0;
 	while(consumed < total_items) {
+		sleep_time = curr_time;
+		usleep(consumer_sleep);
+		curr_time = sleep_time + consumer_sleep;
 		sem_wait(&full);
 		sem_wait(&mutex);
-		printf("CONSUMERS HAVE CONSUMED %d/%d ITEMS, %d ITEMS PRODUCED, YUM YUM YUM\n", consumed, total_items-1, produced);
+		// printf("CONSUMERS HAVE CONSUMED %d/%d ITEMS, %d ITEMS PRODUCED, YUM YUM YUM\n", consumed, total_items-1, produced);
 		int removed = BB->remove();
 		consumed+=1;
-		printf("Consumer removed %d", removed);
+		printf("Consumer #%ld, time = %d, consuming data item with value=%d\n", t_id, curr_time, removed);
+		// printf("Consumer removed %d", removed);
 		sem_post(&mutex);
 		sem_post(&empty);
 	}
 
 	// end code here
-	printf("consumer done *********************************\n");
+	// printf("consumer done *********************************\n");
 	pthread_exit(NULL);
 }
