@@ -1,6 +1,7 @@
 #include "ProducerConsumer.h"
 #include <stdio.h>
 #include <stdlib.h>     /* rand */
+#include <semaphore.h>
 
 
 //TODO: add BoundedBuffer, locks and any global variables here
@@ -18,18 +19,10 @@ int consumed = 0;
 int producer_sleep = 0; 
 int consumer_sleep = 0;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; //lock for access to buffer to provide mutual exclusion
+// locks 
 sem_t mutex;
-sem_init(&mutex, 0, 1);
 sem_t empty;
 sem_t full;
-sem_init(&empty, 0, 1);   // Make some sort of macro something
-sem_init(&full, 0, 0);
-
-// pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
-// pthread_cond_t full = PTHREAD_COND_INITIALIZER;
-
-
 
 
 
@@ -55,6 +48,9 @@ void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
 		printf("ERROR; number of producer or consumer threads < 1");
 		exit(-1);
 	}
+	sem_init(&mutex, 0, 1);
+	sem_init(&empty, 0, 1);   // Make some sort of macro something
+	sem_init(&full, 0, 0);
 
 	// array of pthreads for producers
 	pthread_t producers[p];
@@ -92,8 +88,8 @@ void* producer(void* threadID){
 	//TODO: producer thread, see instruction for implementation
 	long t_id = (long) threadID;
 	while(produced < total_items) {
-		
-		pthread_mutex_lock(&mutex);
+		sem_wait(&empty);
+		sem_wait(&mutex);
 
 		int random = rand();
 		printf("Producer produced = %d \n", random);
@@ -101,44 +97,13 @@ void* producer(void* threadID){
 		BB->append(random);
 		printf("appending completed\n");
 		produced+=1;
-		pthread_cond_signal(&full);
-
-		pthread_mutex_unlock(&mutex);
-
+		sem_post(&mutex);
+		sem_post(&full);
 
 	}
 
-
-	/* 
-	printf("sleep interval is: %d\n",producer_sleep);
-	long t_id = (long) threadID;
-	printf("producer: %ld produced\n", t_id);
-
-	// code here
-	int sleep_time = 0;
-	while(produced < total_items) {
-		// pthread_mutex_lock(&producer_lock);
-		sleep_time = curr_time;
-
-		printf("Producer sleeps at time: %d\n", sleep_time);
-
-		usleep(producer_sleep); // sleep for specified time
-		int random = rand();
-
-		pthread_mutex_lock(&produced_lock);
-		curr_time = sleep_time + producer_sleep;
-		printf("Producer wakes at time: %d with produced = %d \n", curr_time, produced);
-		BB->append(random);
-		produced+=1;
-		printf("Now produced = %d\n", produced);
-		pthread_mutex_unlock(&produced_lock);
-
-		printf("Produced item %d\n", random);
-		// pthread_mutex_unlock(&producer_lock);
-	}
-	*/
 	// test code end
-	printf("producer done \n");
+	printf("producer done ***********************************\n");
 
 	pthread_exit(NULL);
 }
@@ -150,41 +115,18 @@ void* consumer(void* threadID){
 
 	// code here ***********************
 	int sleep_time = 0;
-	while(consumed != total_items) {
+	while(consumed < total_items) {
+		sem_wait(&full);
+		sem_wait(&mutex);
 		printf("CONSUMERS HAVE CONSUMED %d/%d ITEMS, %d ITEMS PRODUCED, YUM YUM YUM\n", consumed, total_items-1, produced);
-				
-		pthread_mutex_lock(&mutex);
-		while(BB->isEmpty()) {
-			pthread_cond_wait(&full, &mutex);
-		}
 		int removed = BB->remove();
 		consumed+=1;
 		printf("Consumer removed %d", removed);
-		pthread_mutex_unlock(&mutex);
-
+		sem_post(&mutex);
+		sem_post(&empty);
 	}
-	/*
-	int sleep_time = 0;
-	// while there are still items being produced an in the queue
-	while(produced < total_items || consumed != total_items){
-		printf("CONSUMERS HAVE CONSUMED %d/%d ITEMS, %d ITEMS PRODUCED, YUM YUM YUM\n", consumed, total_items, produced);
-		sleep_time = curr_time;
-		printf("Consumer sleeps at time: %d\n", sleep_time);
-		usleep(consumer_sleep);
-		pthread_mutex_lock(&produced_lock);
-		curr_time = sleep_time + consumer_sleep;
-		printf("Consumer wakes at time %d\n", curr_time);
-		pthread_mutex_unlock(&produced_lock);
-		int removed = BB->remove();
-		pthread_mutex_lock(&produced_lock);
-		consumed+=1;
-		pthread_mutex_unlock(&produced_lock);
-
-		printf("Consumed item %d\n", removed);
-	}
-	*/
 
 	// end code here
-	printf("consumer done\n");
+	printf("consumer done *********************************\n");
 	pthread_exit(NULL);
 }
