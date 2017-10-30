@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>     /* rand */
 #include <semaphore.h>
-
+#include <iostream>
+#include <fstream>
 
 //TODO: add BoundedBuffer, locks and any global variables here
 BoundedBuffer *BB = new BoundedBuffer(10);
@@ -24,6 +25,10 @@ int consumer_sleep = 0;
 sem_t mutex;
 sem_t empty;
 sem_t full;
+	
+// file 
+ofstream output;
+
 
 
 void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
@@ -31,13 +36,14 @@ void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
 	//TODO: How many items are in the buffer? Whats the size????
 	producer_sleep = psleep;
 	consumer_sleep = csleep;
+  	output.open ("output.txt");
 	total_items = items;
 	if(p < 1 || c < 1){
 		printf("ERROR; number of producer or consumer threads < 1");
 		exit(-1);
 	}
 	sem_init(&mutex, 0, 1);
-	sem_init(&empty, 0, 1);   // Make some sort of macro something
+	sem_init(&empty, 0, 10);   
 	sem_init(&full, 0, 0);
 
 	// array of pthreads for producers
@@ -76,11 +82,11 @@ void* producer(void* threadID){
 	//TODO: producer thread, see instruction for implementation
 	long t_id = (long) threadID;
 	while(produced < total_items) {
-		
+		int sleep_time = curr_time;
+		usleep(producer_sleep);
+
 		sem_wait(&empty);
 		sem_wait(&mutex);
-		int sleep_time = curr_time;
-		// usleep(producer_sleep);
 		curr_time = sleep_time + producer_sleep;
 
 		int random = rand();
@@ -88,7 +94,7 @@ void* producer(void* threadID){
 		BB->append(random);
 
 		produced+=1;
-		printf("Producer #%ld, time = %d, producing data item #%d, item value=%d\n", t_id, curr_time, produced, random);
+		output << "Producer #" << t_id <<", time = " << curr_time << ", producing data item #" << produced <<", item value=" << random << "\n";
 
 		sem_post(&mutex);
 		sem_post(&full);
@@ -101,16 +107,16 @@ void* consumer(void* threadID){
 	//TODO: consumer thread, see instruction for implementation
 	long t_id = (long) threadID;
 	while(consumed < total_items) {
+		int sleep_time = curr_time;
+		usleep(consumer_sleep);
+
 		sem_wait(&full);
 		sem_wait(&mutex);
-
-		int sleep_time = curr_time;
-		// usleep(consumer_sleep);
 		curr_time = sleep_time + consumer_sleep;
 		int removed = BB->remove();
 		consumed+=1;
 
-		printf("Consumer #%ld, time = %d, consuming data item with value=%d\n", t_id, curr_time, removed);
+		output << "Consumer #" << t_id << ", time = " << curr_time << ", consuming data item with value=" << removed << "\n";
 
 		sem_post(&mutex);
 		sem_post(&empty);
