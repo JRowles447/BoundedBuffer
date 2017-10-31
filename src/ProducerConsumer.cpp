@@ -16,6 +16,7 @@ int curr_time = 0;
 int produced = 0;
 int total_items = 0;
 int consumed = 0;
+int appended = 0;
 
 //sleep times
 int producer_sleep = 0; 
@@ -119,9 +120,15 @@ void* consumer(void* threadID){
 		int removed = BB->remove();
 
 		output << "Consumer #" << t_id << ", time = " << curr_time << ", consuming data item with value=" << removed << "\n";
-
+		appended +=1;
 		sem_post(&mutex);
 		sem_post(&empty);
+	}
+
+	while(appended == total_items && output.is_open()){
+		sem_wait(&mutex);
+		output.close();
+		sem_post(&mutex);
 	}
 	pthread_exit(NULL);
 }
