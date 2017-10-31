@@ -29,8 +29,6 @@ sem_t full;
 // file 
 ofstream output;
 
-
-
 void InitProducerConsumer(int p, int c, int psleep, int csleep, int items){
 	//TODO: constructor to initialize variables declared
 	//TODO: How many items are in the buffer? Whats the size????
@@ -82,18 +80,20 @@ void* producer(void* threadID){
 	//TODO: producer thread, see instruction for implementation
 	long t_id = (long) threadID;
 	while(produced < total_items) {
-		int sleep_time = curr_time;
+		sem_wait(&mutex);
+		produced+=1;
+		sem_post(&mutex);
+
 		usleep(producer_sleep);
 
 		sem_wait(&empty);
 		sem_wait(&mutex);
-		curr_time = sleep_time + producer_sleep;
+		curr_time += producer_sleep;
 
 		int random = rand();
 
 		BB->append(random);
 
-		produced+=1;
 		output << "Producer #" << t_id <<", time = " << curr_time << ", producing data item #" << produced <<", item value=" << random << "\n";
 
 		sem_post(&mutex);
@@ -107,14 +107,16 @@ void* consumer(void* threadID){
 	//TODO: consumer thread, see instruction for implementation
 	long t_id = (long) threadID;
 	while(consumed < total_items) {
-		int sleep_time = curr_time;
+		sem_wait(&mutex);
+		consumed+=1;
+		sem_post(&mutex);
+
 		usleep(consumer_sleep);
 
 		sem_wait(&full);
 		sem_wait(&mutex);
-		curr_time = sleep_time + consumer_sleep;
+		curr_time += consumer_sleep;
 		int removed = BB->remove();
-		consumed+=1;
 
 		output << "Consumer #" << t_id << ", time = " << curr_time << ", consuming data item with value=" << removed << "\n";
 
